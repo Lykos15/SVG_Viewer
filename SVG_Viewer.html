@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>SVG Viewer</title>
+    <style type="text/css">
+      body {
+        background-color: #f0f0f2;
+        margin: 0;
+        padding: 0;
+        font-family: consolas;
+      }
+
+      #SvgViewer_Container{
+        width: 800px;
+        height: 800px;
+        border-style: solid;
+        position: absolute;
+        left: 600px;
+        top: 20px;
+        margin: 0;
+      }
+
+      #SvgViewer_SVG{
+        width: 100%;
+        height: 100%;
+        /*cursor: none;*/
+      }
+
+      #SvgViewer_Cursor{
+        pointer-events: none;
+
+      }
+
+      #SvgViewer_ClickPrevent{
+        fill: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="SvgViewer_Container">
+      <svg id="SvgViewer_SVG" viewBox="-800 -800 1600 1600" >
+        <g id="SvgViewer_yinvert" transform="scale(1,-1)">
+          <g id="SvgViewer_PanControl" transform="translate(0,0)">
+            <g id="SvgViewer_ZoomControl" transform="scale(1,1)">
+              <g id="SvgViewer_DrawArea">
+
+              </g>
+              <!--g id="SvgViewer_CursorGroup" transform="translate(1,1)">
+                <circle id="SvgViewer_Cursor" transform="scale(1,1)" cx="0" cy="0" r="4"></circle>
+              </g-->
+              <g id="SvgViewer_ClickPreventGroup" transform="translate(1,1)">
+                <circle id="SvgViewer_ClickPrevent" transform="scale(1,1)" r="40"></circle>
+              </g>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <script>
+      let mousedown = false;
+      let viewBoxValue = [-800, -800, 1600, 1600];
+      let translate = { x: 0, y: 0 }, scale = { x: 1, y: 1 };
+
+      let SvgViewer = {
+        Zoom: function (e) {
+          e.preventDefault();
+          let dx, dy;
+          let pt = document.getElementById("SvgViewer_SVG").createSVGPoint();
+          let DrawArea = document.getElementById("SvgViewer_DrawArea");
+
+          pt.x = e.clientX;
+          pt.y = e.clientY;
+          pt = pt.matrixTransform(DrawArea.getScreenCTM().inverse());
+
+          if (e.deltaY < 0) {//in
+            dx = pt["x"] * 0.25;
+            dy = pt["y"] * 0.25;
+            translate["x"] -= dx * scale["y"];
+            translate["y"] -= dy * scale["x"];
+            scale["x"] *= 1.25;
+            scale["y"] *= 1.25;
+          }
+          else {//out
+            dx = pt["x"] * 0.2;
+            dy = pt["y"] * 0.2;
+            translate["x"] += dx * scale["y"];
+            translate["y"] += dy * scale["x"];
+            scale["x"] /= 1.25;
+            scale["y"] /= 1.25;
+          }
+
+          document.getElementById("SvgViewer_ZoomControl").setAttribute("transform", "scale(" + scale["x"] + "," + scale["y"] + ")");
+          document.getElementById("SvgViewer_PanControl").setAttribute("transform", "translate(" + translate["x"] + "," + translate["y"] + ")");
+          document.getElementById("SvgViewer_ClickPrevent").setAttribute("transform", "scale(" + 1 / scale["x"] + "," + 1 / scale["y"] + ")");
+          document.getElementById("SvgViewer_Cursor")?.setAttribute("transform", "scale(" + 1 / scale["x"] + "," + 1 / scale["y"] + ")");
+        },
+
+        MouseMove: function (e) {
+          let svg = document.getElementById("SvgViewer_SVG");
+          let DrawArea = document.getElementById("SvgViewer_DrawArea");
+
+          let pt = svg.createSVGPoint();
+          pt.x = e.clientX;
+          pt.y = e.clientY;
+          pt = pt.matrixTransform(DrawArea.getScreenCTM().inverse());
+          document.getElementById("SvgViewer_CursorGroup")?.setAttribute("transform", "translate(" + pt["x"] + ", " + pt["y"] + ")");
+          if (mousedown) {
+            translate["x"] += e.movementX * 2;
+            translate["y"] += e.movementY * -2;
+            document.getElementById("SvgViewer_PanControl").setAttribute("transform", "translate(" + translate["x"] + "," + translate["y"] + ")");
+            document.getElementById("SvgViewer_ClickPreventGroup").setAttribute("transform", "translate(" + pt["x"] + ", " + pt["y"] + ")");
+            document.getElementById("SvgViewer_ClickPrevent").style.display = "block";
+          }
+        },
+
+        Resize: function () {
+          let svg = document.getElementById("SvgViewer_SVG");
+          let height = svg.clientHeight;
+          let width = svg.clientWidth;
+          viewBoxValue = [-width, -height, width * 2, height * 2];
+          svg.attributes.viewBox.value = viewBoxValue[0] + " " + viewBoxValue[1] + " " + viewBoxValue[2] + " " + viewBoxValue[3];
+        },
+
+        MouseUp: function () {
+          mousedown = false;
+          document.getElementById("SvgViewer_ClickPrevent").style.display = "none";
+        },
+
+        AddEventListener: function () {
+          let svg = document.getElementById("SvgViewer_SVG");
+          let clickPrevent = document.getElementById("SvgViewer_ClickPrevent");
+
+          window.addEventListener("mouseup", SvgViewer.MouseUp);
+          window.addEventListener("mousemove", SvgViewer.MouseMove);
+          window.addEventListener("mouseenter", function () {mousedown = false;});
+          window.addEventListener("mouseleave", function () {mousedown = false;});
+
+          svg.addEventListener("wheel", SvgViewer.Zoom);
+          svg.addEventListener("mousedown", function () {mousedown = true;});
+
+          clickPrevent?.addEventListener("mouseup", SvgViewer.MouseUp);
+        },
+
+        RemoveEventListener: function () {
+          let svg = document.getElementById("SvgViewer_SVG");
+          let clickPrevent = document.getElementById("SvgViewer_ClickPrevent");
+
+          window.removeEventListener("mouseup", SvgViewer.MouseUp);
+          window.removeEventListener("mousemove", SvgViewer.MouseMove);
+          window.removeEventListener("mouseenter", function () {mousedown = false;});
+          window.removeEventListener("mouseleave", function () {mousedown = false;});
+
+          svg.removeEventListener("wheel", SvgViewer.Zoom);
+          svg.removeEventListener("mousedown", function () {mousedown = true;});
+
+          clickPrevent?.removeEventListener("mouseup", SvgViewer.MouseUp);
+        }
+      };
+
+      SvgViewer.AddEventListener();
+
+      let resizeObserver = new ResizeObserver(SvgViewer.Resize);
+      resizeObserver.observe(document.getElementById("SvgViewer_Container"));
+
+    </script>
+  </body>
+</html>
