@@ -29,6 +29,7 @@
 
       #SvgViewer_Cursor{
         pointer-events: none;
+
       }
 
       #SvgViewer_ClickPrevent{
@@ -43,7 +44,7 @@
           <g id="SvgViewer_PanControl" transform="translate(0,0)">
             <g id="SvgViewer_ZoomControl" transform="scale(1,1)">
               <g id="SvgViewer_DrawArea">
-
+                
               </g>
               <!--g id="SvgViewer_CursorGroup" transform="translate(1,1)">
                 <circle id="SvgViewer_Cursor" transform="scale(1,1)" cx="0" cy="0" r="4"></circle>
@@ -57,11 +58,15 @@
       </svg>
     </div>
     <script>
-      let mousedown = false;
-      let viewBoxValue = [-800, -800, 1600, 1600];
-      let translate = { x: 0, y: 0 }, scale = { x: 1, y: 1 };
+
 
       let SvgViewer = {
+
+        mousedown: false,
+        viewBoxValue: [-800, -800, 1600, 1600],
+        translate: { x: 0, y: 0 },
+        scale: 1,
+
         Zoom: function (e) {
           e.preventDefault();
           let dx, dy;
@@ -75,24 +80,22 @@
           if (e.deltaY < 0) {//in
             dx = pt["x"] * 0.25;
             dy = pt["y"] * 0.25;
-            translate["x"] -= dx * scale["y"];
-            translate["y"] -= dy * scale["x"];
-            scale["x"] *= 1.25;
-            scale["y"] *= 1.25;
+            SvgViewer.translate["x"] -= dx * SvgViewer.scale;
+            SvgViewer.translate["y"] -= dy * SvgViewer.scale;
+            SvgViewer.scale *= 1.25;
           }
           else {//out
             dx = pt["x"] * 0.2;
             dy = pt["y"] * 0.2;
-            translate["x"] += dx * scale["y"];
-            translate["y"] += dy * scale["x"];
-            scale["x"] /= 1.25;
-            scale["y"] /= 1.25;
+            SvgViewer.translate["x"] += dx * SvgViewer.scale;
+            SvgViewer.translate["y"] += dy * SvgViewer.scale;
+            SvgViewer.scale /= 1.25;
           }
 
-          document.getElementById("SvgViewer_ZoomControl").setAttribute("transform", "scale(" + scale["x"] + "," + scale["y"] + ")");
-          document.getElementById("SvgViewer_PanControl").setAttribute("transform", "translate(" + translate["x"] + "," + translate["y"] + ")");
-          document.getElementById("SvgViewer_ClickPrevent").setAttribute("transform", "scale(" + 1 / scale["x"] + "," + 1 / scale["y"] + ")");
-          document.getElementById("SvgViewer_Cursor")?.setAttribute("transform", "scale(" + 1 / scale["x"] + "," + 1 / scale["y"] + ")");
+          document.getElementById("SvgViewer_ZoomControl").setAttribute("transform", "scale(" + SvgViewer.scale + "," + SvgViewer.scale + ")");
+          document.getElementById("SvgViewer_PanControl").setAttribute("transform", "translate(" + SvgViewer.translate["x"] + "," + SvgViewer.translate["y"] + ")");
+          document.getElementById("SvgViewer_ClickPrevent").setAttribute("transform", "scale(" + 1 / SvgViewer.scale + "," + 1 / SvgViewer.scale + ")");
+          document.getElementById("SvgViewer_Cursor")?.setAttribute("transform", "scale(" + 1 / SvgViewer.scale + "," + 1 / SvgViewer.scale + ")");
         },
 
         MouseMove: function (e) {
@@ -104,10 +107,10 @@
           pt.y = e.clientY;
           pt = pt.matrixTransform(DrawArea.getScreenCTM().inverse());
           document.getElementById("SvgViewer_CursorGroup")?.setAttribute("transform", "translate(" + pt["x"] + ", " + pt["y"] + ")");
-          if (mousedown) {
-            translate["x"] += e.movementX * 2;
-            translate["y"] += e.movementY * -2;
-            document.getElementById("SvgViewer_PanControl").setAttribute("transform", "translate(" + translate["x"] + "," + translate["y"] + ")");
+          if (SvgViewer.mousedown) {
+            SvgViewer.translate["x"] += e.movementX * 2;
+            SvgViewer.translate["y"] += e.movementY * -2;
+            document.getElementById("SvgViewer_PanControl").setAttribute("transform", "translate(" + SvgViewer.translate["x"] + "," + SvgViewer.translate["y"] + ")");
             document.getElementById("SvgViewer_ClickPreventGroup").setAttribute("transform", "translate(" + pt["x"] + ", " + pt["y"] + ")");
             document.getElementById("SvgViewer_ClickPrevent").style.display = "block";
           }
@@ -117,12 +120,12 @@
           let svg = document.getElementById("SvgViewer_SVG");
           let height = svg.clientHeight;
           let width = svg.clientWidth;
-          viewBoxValue = [-width, -height, width * 2, height * 2];
-          svg.attributes.viewBox.value = viewBoxValue[0] + " " + viewBoxValue[1] + " " + viewBoxValue[2] + " " + viewBoxValue[3];
+          SvgViewer.viewBoxValue = [-width, -height, width * 2, height * 2];
+          svg.attributes.viewBox.value = SvgViewer.viewBoxValue[0] + " " + SvgViewer.viewBoxValue[1] + " " + SvgViewer.viewBoxValue[2] + " " + SvgViewer.viewBoxValue[3];
         },
 
         MouseUp: function () {
-          mousedown = false;
+          SvgViewer.mousedown = false;
           document.getElementById("SvgViewer_ClickPrevent").style.display = "none";
         },
 
@@ -132,11 +135,11 @@
 
           window.addEventListener("mouseup", SvgViewer.MouseUp);
           window.addEventListener("mousemove", SvgViewer.MouseMove);
-          window.addEventListener("mouseenter", function () {mousedown = false;});
-          window.addEventListener("mouseleave", function () {mousedown = false;});
+          window.addEventListener("mouseenter", function () {SvgViewer.mousedown = false;});
+          window.addEventListener("mouseleave", function () {SvgViewer.mousedown = false;});
 
           svg.addEventListener("wheel", SvgViewer.Zoom);
-          svg.addEventListener("mousedown", function () {mousedown = true;});
+          svg.addEventListener("mousedown", function () {SvgViewer.mousedown = true;});
 
           clickPrevent?.addEventListener("mouseup", SvgViewer.MouseUp);
         },
@@ -147,11 +150,11 @@
 
           window.removeEventListener("mouseup", SvgViewer.MouseUp);
           window.removeEventListener("mousemove", SvgViewer.MouseMove);
-          window.removeEventListener("mouseenter", function () {mousedown = false;});
-          window.removeEventListener("mouseleave", function () {mousedown = false;});
+          window.removeEventListener("mouseenter", function () {SvgViewer.mousedown = false;});
+          window.removeEventListener("mouseleave", function () {SvgViewer.mousedown = false;});
 
           svg.removeEventListener("wheel", SvgViewer.Zoom);
-          svg.removeEventListener("mousedown", function () {mousedown = true;});
+          svg.removeEventListener("mousedown", function () {SvgViewer.mousedown = true;});
 
           clickPrevent?.removeEventListener("mouseup", SvgViewer.MouseUp);
         }
