@@ -68,20 +68,23 @@
         draging : false,
         DragedBlock : null,
 
-        Block: function (Shape) {//{tag:"rect", height:20, width:50}
+        Block: function (Shape, Startpos) {//{tag:"rect", height:20, width:50}, {x: 20, y: 50}
           if(typeof(Shape) != "object" || Shape.tag == undefined)
             throw "Wrong Shape";
 
           let SvgElement;
           this.Position = {x: 0, y: 0};
 
-          function CreateSvgBlock(Shape) {
+          function CreateSvgBlock(Shape, Startpos) {
             let BlockId = DragableBlocks.DelIDs.length == 0 ? DragableBlocks.i++ : DragableBlocks.DelIDs.shift();
 
             SvgElement = document.createElementNS("http://www.w3.org/2000/svg", Shape.tag);
             delete Shape.tag;
             for (var key in Shape)
               SvgElement.setAttribute(key, Shape[key]);
+
+            if(Startpos != undefined)
+              SvgElement.setAttribute("transform", "translate(" + Startpos.x + "," + Startpos.y + ")");
 
             SvgElement.dataset.BlockId = BlockId;
             SvgElement.addEventListener("mousedown", DragableBlocks.StartDragBlock);
@@ -90,7 +93,7 @@
             return BlockId;
           }
 
-          DragableBlocks.Blocks[CreateSvgBlock(Shape)] = this;
+          DragableBlocks.Blocks[CreateSvgBlock(Shape, Startpos)] = this;
           this.Element = SvgElement;
         },
 
